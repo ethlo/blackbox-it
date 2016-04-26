@@ -31,10 +31,12 @@ import org.springframework.test.context.ContextConfiguration;
 import com.ethlo.blackboxit.AbstractTest.Cfg;
 import com.jayway.restassured.RestAssured;
 
+import groovy.util.GroovyTestCase;
+
 @RunWith(CustomOrderSpringJunitTestRunner.class)
 @ContextConfiguration(classes=Cfg.class)
 @PropertySource(value="classpath:application.properties")
-public abstract class AbstractTest 
+public abstract class AbstractTest extends GroovyTestCase
 {
 	private static final Logger logger = LoggerFactory.getLogger(AbstractTest.class);
 	

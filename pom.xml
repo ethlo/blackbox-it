@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.ethlo.test</groupId>
 	<artifactId>blackbox-it</artifactId>
-	<version>0.1-SNAPSHOT</version>
+	<version>0.3</version>
 	<name>Blackbox IT</name>
 	<description>Blackbox integration test utilities</description>
 	<parent>
@@ -42,6 +42,28 @@
 			<artifactId>commons-io</artifactId>
 			<version>2.3</version>
 		</dependency>
+		<dependency> <!-- use a specific Groovy version rather than the one specified by spock-core -->
+			<groupId>org.codehaus.groovy</groupId>
+			<artifactId>groovy-all</artifactId>
+		</dependency>
+		<dependency> <!-- enables mocking of classes (in addition to interfaces) -->
+			<groupId>cglib</groupId>
+			<artifactId>cglib-nodep</artifactId>
+			<version>3.1</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- enables mocking of classes without default constructor (together with CGLIB) -->
+		<dependency> 
+			<groupId>org.objenesis</groupId>
+			<artifactId>objenesis</artifactId>
+			<version>2.1</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency> <!-- only required if Hamcrest matchers are used -->
+			<groupId>org.hamcrest</groupId>
+			<artifactId>hamcrest-core</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 	<build>
 		<plugins>
@@ -54,6 +76,35 @@
 					<encoding>UTF-8</encoding>
 				</configuration>
 			</plugin>
+			<plugin>
+				<artifactId>maven-source-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
+		<extensions>
+			<extension>
+				<groupId>org.apache.maven.wagon</groupId>
+				<artifactId>wagon-ssh</artifactId>
+				<version>2.10</version>
+			</extension>
+		</extensions>
 	</build>
+	<scm>
+		<url>http://github.com:ethlo/dachs</url>
+		<connection>scm:git:git@github.com:ethlo/dachs.git</connection>
+		<developerConnection>scm:git:git@github.com:ethlo/dachs.git</developerConnection>
+	</scm>
+	<distributionManagement>
+		<repository>
+			<id>ethlo-repo</id>
+			<url>scp://scp.domeneshop.no//home/3/e/ethlo/www/maven</url>
+		</repository>
+	</distributionManagement>
 </project>

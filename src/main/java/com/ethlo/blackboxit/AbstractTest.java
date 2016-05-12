@@ -33,7 +33,7 @@ import com.jayway.restassured.RestAssured;
 
 import groovy.util.GroovyTestCase;
 
-@RunWith(CustomOrderSpringJunitTestRunner.class)
+@RunWith(BlackboxTestRunner.class)
 @ContextConfiguration(classes=Cfg.class)
 @PropertySource(value="classpath:application.properties")
 public abstract class AbstractTest extends GroovyTestCase
@@ -63,7 +63,7 @@ public abstract class AbstractTest extends GroovyTestCase
         protected void finished(long nanos, Description description)
         {
         	lastWasReadOnly = description.getAnnotation(ReadOnly.class) != null;
-            logger.info("Finished test {} - {} in {} ms", getClass().getSimpleName(), name.getMethodName(), TimeUnit.MILLISECONDS.convert(nanos, TimeUnit.NANOSECONDS));
+            //logger.info("Finished test {} - {} in {} ms", getClass().getSimpleName(), name.getMethodName(), TimeUnit.MILLISECONDS.convert(nanos, TimeUnit.NANOSECONDS));
         }
     };
 	
@@ -89,11 +89,11 @@ public abstract class AbstractTest extends GroovyTestCase
 	
 		if (! lastWasReadOnly)
 		{
-			//logger.info("Last was not read-only, resetting test-data");
+			logger.debug("Last was not read-only, resetting test-data");
 			new ResourceDatabasePopulator(scripts).execute(dataSource);
 		}
 		
-		logger.info("Starting test " + getClass().getSimpleName() + " - " + name.getMethodName());
+		//logger.info("Starting test " + getClass().getSimpleName() + " - " + name.getMethodName());
 	}
 	
 	protected String requestBody()

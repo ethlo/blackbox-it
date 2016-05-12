@@ -84,38 +84,28 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 				}
 			}.run();
 			
-			final List<ConcurrentStatement> concurrentStatements = createConcurrentTests(notifier, notifiers, test);
-			evaluateStatement(createBefores(test), notifiers);
-
-			final ExecutorService pool = Executors.newFixedThreadPool(concurrentStatements.size());
-			for (ConcurrentStatement st : concurrentStatements)
-			{
-				final ConcurrentRunnable runnable = new ConcurrentRunnable(st);
-				pool.submit(runnable);
-			}
-			pool.shutdown();
-			try
-			{
-				pool.awaitTermination(100, TimeUnit.SECONDS);
-			}
-			catch (InterruptedException e)
-			{
-				throw new RuntimeException(e);
-			}
-
-			for (ConcurrentStatement st : concurrentStatements)
-			{
-				st.addFailures();
-			}
-			
-			evaluateStatement(createAfters(test), notifiers);
-
-			logPerformanceReport(concurrentStatements);
-			
 			for (FrameworkMethod method : getChildren())
 			{
 				final Description description = describeChild(method);
-				notifier.fireTestFinished(description);
+				
+				if (method.getAnnotation(Ignore.class) != null)
+				{
+					notifier.fireTestIgnored(description);
+				}
+				else
+				{
+					final List<ConcurrentStatement> concurrentStatements = createSingleConcurrentTest(method, notifier, notifiers, test);
+					evaluateStatement(createBefores(test), notifiers);
+					notifier.fireTestStarted(description);
+					executeInPool(concurrentStatements);
+					for (ConcurrentStatement st : concurrentStatements)
+					{
+						st.addFailures();
+					}
+					evaluateStatement(createAfters(test), notifiers);
+					logPerformanceReport(concurrentStatements);
+					notifier.fireTestFinished(description);
+				}
 			}
 		}
 		catch (Throwable e)
@@ -128,41 +118,47 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 		}
 	}
 
-	private List<ConcurrentStatement> createConcurrentTests(final RunNotifier notifier, final List<EachTestNotifier> eachTestNotifierList, Object test)
-	{
-		final List<ConcurrentStatement> concurrentStatements = new LinkedList<ConcurrentStatement>();
-		
-		for (FrameworkMethod method : getChildren())
+	private void executeInPool(final List<ConcurrentStatement> concurrentStatements) {
+		final ExecutorService pool = Executors.newFixedThreadPool(concurrentStatements.size());
+		for (ConcurrentStatement st : concurrentStatements)
 		{
-			final Description description = describeChild(method);
-			if (method.getAnnotation(Ignore.class) != null)
-			{
-				notifier.fireTestIgnored(description);
-			}
-			else
-			{
-				final EachTestNotifier eachNotifier = new EachTestNotifier(notifier, description);
-				eachNotifier.fireTestStarted();
-				eachTestNotifierList.add(eachNotifier);
-				final Statement st = createMethodStatement(method, test);
-				
-				final Concurrent concurrentAnnotation = method.getAnnotation(Concurrent.class);
-				if (concurrentAnnotation != null)
-				{
-					runConcurrently(concurrentStatements, eachNotifier, st, concurrentAnnotation);
-				}
-				else
-				{
-					concurrentStatements.add(new ConcurrentStatement(st, eachNotifier, 1, 0, 1));
-				}
-			}
+			final ConcurrentRunnable runnable = new ConcurrentRunnable(st);
+			pool.submit(runnable);
 		}
-		
-		return concurrentStatements;
+		pool.shutdown();
+		try
+		{
+			pool.awaitTermination(100, TimeUnit.SECONDS);
+		}
+		catch (InterruptedException e)
+		{
+			throw new RuntimeException(e);
+		}
 	}
 
-	private void runConcurrently(final List<ConcurrentStatement> concurrentStatements, final EachTestNotifier eachNotifier, final Statement st, final Concurrent concurrentAnnotation)
+	private List<ConcurrentStatement> createSingleConcurrentTest(FrameworkMethod method, final RunNotifier notifier, final List<EachTestNotifier> eachTestNotifierList, Object test)
 	{
+		final Description description = describeChild(method);
+	
+		final EachTestNotifier eachNotifier = new EachTestNotifier(notifier, description);
+		eachNotifier.fireTestStarted();
+		eachTestNotifierList.add(eachNotifier);
+		final Statement st = createMethodStatement(method, test);
+		
+		final Concurrent concurrentAnnotation = method.getAnnotation(Concurrent.class);
+		if (concurrentAnnotation != null)
+		{
+			return doCreateConcurrent(eachNotifier, st, concurrentAnnotation);
+		}
+		else
+		{
+			return Collections.singletonList(new ConcurrentStatement(st, eachNotifier, 1, 0, 1));
+		}
+	}
+
+	private List<ConcurrentStatement> doCreateConcurrent(final EachTestNotifier eachNotifier, final Statement st, final Concurrent concurrentAnnotation)
+	{
+		
 		final int threads = concurrentAnnotation.threads();
 		final int repeats = concurrentAnnotation.repeats();
 		final int warmupRuns = concurrentAnnotation.warmupRuns();
@@ -171,10 +167,12 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 		Assert.isTrue(repeats > 0, "repeats must be 1 or higher");
 		Assert.isTrue(warmupRuns >= 0, "warmupRuns must be 0 or higher");
 		
+		final List<ConcurrentStatement> concurrentStatements = new ArrayList<>();
 		for (int i = 0; i < threads; i++)
 		{
 			concurrentStatements.add(new ConcurrentStatement(st, eachNotifier, repeats, warmupRuns, threads));
 		}
+		return concurrentStatements;
 	}
 
 	private void logPerformanceReport(final List<ConcurrentStatement> concurrentStatements)

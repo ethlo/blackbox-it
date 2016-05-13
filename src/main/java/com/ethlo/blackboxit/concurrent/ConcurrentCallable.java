@@ -1,24 +1,20 @@
 package com.ethlo.blackboxit.concurrent;
 
-public class ConcurrentRunnable implements Runnable
+import java.util.concurrent.Callable;
+
+public class ConcurrentCallable implements Callable<Void>
 {
 	private final ConcurrentStatement concurrentStatement;
 	
-	public ConcurrentRunnable(ConcurrentStatement concurrentStatement)
+	public ConcurrentCallable(ConcurrentStatement concurrentStatement)
 	{
 		this.concurrentStatement = concurrentStatement;
 	}
 
 	@Override
-	public void run()
+	public Void call() throws Exception
 	{
-		try
-		{
-			concurrentStatement.evaluate();
-		}
-		catch(Exception e)
-		{
-			throw new RuntimeException(e);
-		}
+		concurrentStatement.evaluate();
+		return null;
 	}
 }

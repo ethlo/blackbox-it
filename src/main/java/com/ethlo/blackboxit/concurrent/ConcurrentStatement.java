@@ -1,5 +1,8 @@
 package com.ethlo.blackboxit.concurrent;
 
+import java.util.LinkedList;
+import java.util.List;
+
 import org.junit.internal.runners.model.EachTestNotifier;
 import org.junit.runners.model.Statement;
 import org.springframework.util.StopWatch;
@@ -11,7 +14,7 @@ public class ConcurrentStatement extends Statement
 	
 	private final Statement statement;
 	private final  EachTestNotifier eachTestNotifier;
-	private TestResult testResult;
+	private final List<TestResult> testResults = new LinkedList<>();
 	
 	// Test configuration
 	private final int repeats;
@@ -32,21 +35,17 @@ public class ConcurrentStatement extends Statement
 	
 	public void addFailures()
 	{
-		testResult.addTestNotifier(eachTestNotifier);
+		for (TestResult testResult : testResults)
+		{
+			testResult.addTestNotifier(eachTestNotifier);
+		}
 	}
 	
 	@Override
 	public void evaluate()
 	{
-		try
-		{
-			warmup();
-			runTest();
-		}
-		catch (Exception exc)
-		{
-			testResult = new TestResultFailure(exc);
-		}
+		warmup();
+		runTest();
 	}
 
 	private void runTest()
@@ -54,7 +53,7 @@ public class ConcurrentStatement extends Statement
 		for (int i = 0; i < repeats; i++)
 		{
 			stopWatch.start(RUN_STAGE_NAME_PREFIX + Integer.toString(i));
-			testResult = StatementEvaluator.evaluateStatement(statement);
+			final TestResult testResult = StatementEvaluator.evaluateStatement(statement);
 			if (! (testResult instanceof TestResultSuccess))
 			{
 				stopWatch.stop();
@@ -62,6 +61,7 @@ public class ConcurrentStatement extends Statement
 				return;
 			}
 			stopWatch.stop();
+			testResults.add(testResult);
 		}
 	}
 
@@ -72,13 +72,14 @@ public class ConcurrentStatement extends Statement
 			stopWatch.start(WARMUP_STAGE_NAME);
 			for (int i = 0; i < warmupRuns; i++)
 			{
-				testResult = StatementEvaluator.evaluateStatement(statement);
+				final TestResult testResult = StatementEvaluator.evaluateStatement(statement);
 				if (! (testResult instanceof TestResultSuccess))
 				{
 					stopWatch.stop();
 					addFailures();
 					return;
 				}
+				testResults.add(testResult);
 			}
 			stopWatch.stop();
 		}

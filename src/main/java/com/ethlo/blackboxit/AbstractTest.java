@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.concurrent.TimeUnit;
 
 import javax.sql.DataSource;
 
@@ -22,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
@@ -29,6 +29,9 @@ import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.test.context.ContextConfiguration;
 
 import com.ethlo.blackboxit.AbstractTest.Cfg;
+import com.ethlo.blackboxit.reporting.JsonDumpReportingListener;
+import com.ethlo.blackboxit.reporting.LogbackReportingListener;
+import com.ethlo.blackboxit.reporting.ReportingListener;
 import com.jayway.restassured.RestAssured;
 
 import groovy.util.GroovyTestCase;
@@ -63,7 +66,6 @@ public abstract class AbstractTest extends GroovyTestCase
         protected void finished(long nanos, Description description)
         {
         	lastWasReadOnly = description.getAnnotation(ReadOnly.class) != null;
-            //logger.info("Finished test {} - {} in {} ms", getClass().getSimpleName(), name.getMethodName(), TimeUnit.MILLISECONDS.convert(nanos, TimeUnit.NANOSECONDS));
         }
     };
 	
@@ -81,7 +83,7 @@ public abstract class AbstractTest extends GroovyTestCase
 	}
 	
 	@Before
-	public void resetDb()
+	public final void reset()
 	{
 		RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 		RestAssured.baseURI = baseURI;
@@ -91,9 +93,17 @@ public abstract class AbstractTest extends GroovyTestCase
 		{
 			logger.debug("Last was not read-only, resetting test-data");
 			new ResourceDatabasePopulator(scripts).execute(dataSource);
+			
+			doReset();
 		}
+	}
+
+	/**
+	 * Empty method that can be overridden to listen for every time the tets-data is reset 
+	 */
+	protected void doReset()
+	{
 		
-		//logger.info("Starting test " + getClass().getSimpleName() + " - " + name.getMethodName());
 	}
 	
 	protected String requestBody()
@@ -119,6 +129,16 @@ public abstract class AbstractTest extends GroovyTestCase
 	@PropertySource("classpath:application.properties")
 	public static class Cfg
 	{
+		@Bean
+		public ReportingListener logbackReportingListener()
+		{
+			return new LogbackReportingListener();
+		}
 		
+		@Bean
+		public JsonDumpReportingListener jsonReportingListener()
+		{
+			return new JsonDumpReportingListener(Paths.get(System.getProperty("user.home"), "blackbox-it", "testdata").toString());
+		}
 	}
 }

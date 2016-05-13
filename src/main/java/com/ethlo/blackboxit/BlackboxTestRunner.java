@@ -1,21 +1,20 @@
 package com.ethlo.blackboxit;
 
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Future;
 
-import org.apache.commons.lang3.StringUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.internal.runners.model.EachTestNotifier;
-import org.junit.internal.runners.model.ReflectiveCallable;
 import org.junit.internal.runners.statements.Fail;
 import org.junit.rules.MethodRule;
 import org.junit.rules.RunRules;
@@ -26,32 +25,33 @@ import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.Statement;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.test.context.TestContextManager;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.support.DefaultTestContext;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.util.Assert;
-import org.springframework.util.StopWatch;
-import org.springframework.util.StopWatch.TaskInfo;
 
 import com.ethlo.blackboxit.concurrent.Concurrent;
-import com.ethlo.blackboxit.concurrent.ConcurrentRunnable;
+import com.ethlo.blackboxit.concurrent.ConcurrentCallable;
 import com.ethlo.blackboxit.concurrent.ConcurrentStatement;
 import com.ethlo.blackboxit.concurrent.EmptyStatement;
 import com.ethlo.blackboxit.concurrent.StatementEvaluator;
 import com.ethlo.blackboxit.concurrent.StatementList;
 import com.ethlo.blackboxit.concurrent.TestResult;
+import com.ethlo.blackboxit.reporting.PerformanceReport;
+import com.ethlo.blackboxit.reporting.ReportGenerator;
+import com.ethlo.blackboxit.reporting.ReportingListener;
 
 public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 {
-	private static final Logger logger = LoggerFactory.getLogger(BlackboxTestRunner.class);
-	
 	public BlackboxTestRunner(Class<?> clazz) throws InitializationError
 	{
 		super(clazz);
 	}
 
 	@Override
-	protected List<FrameworkMethod> computeTestMethods() {
+	protected List<FrameworkMethod> computeTestMethods()
+	{
 		final List<FrameworkMethod> list = new ArrayList<>(super.computeTestMethods());
 		Collections.sort(list, READ_ONLY_FIRST);
 		return list;
@@ -63,74 +63,104 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 		return new Statement()
 		{
 			@Override
-			public void evaluate() {
-				runChildrenConcurrently(notifier);
+			public void evaluate()
+			{
+				runTestMethods(notifier);
 			}
 		};
 	}
 
-	private void runChildrenConcurrently(final RunNotifier notifier)
+	private void runTestMethods(final RunNotifier notifier)
 	{
 		final List<EachTestNotifier> notifiers = new LinkedList<EachTestNotifier>();
 		
-		try
+		final Object test = getTestInstance();
+		
+		// Get application context
+		final TestContextManager testCtx = getTestContextManager();
+		final DefaultTestContext dtc = (DefaultTestContext) ReflectionTestUtils.getField(testCtx, "testContext");
+		final Map<String, ReportingListener> reportingListeners = dtc.getApplicationContext().getBeansOfType(ReportingListener.class);
+
+		reportingListeners.values().forEach(v ->{v.started(test);});
+		
+		for (FrameworkMethod method : getChildren())
 		{
-			final Object test = new ReflectiveCallable()
-			{
-				@Override
-				protected Object runReflectiveCall() throws Throwable
-				{
-					return createTest();
-				}
-			}.run();
+			final Description description = describeChild(method);
 			
-			for (FrameworkMethod method : getChildren())
+			if (method.getAnnotation(Ignore.class) != null)
 			{
-				final Description description = describeChild(method);
-				
-				if (method.getAnnotation(Ignore.class) != null)
-				{
-					notifier.fireTestIgnored(description);
-				}
-				else
-				{
-					final List<ConcurrentStatement> concurrentStatements = createSingleConcurrentTest(method, notifier, notifiers, test);
-					evaluateStatement(createBefores(test), notifiers);
-					notifier.fireTestStarted(description);
-					executeInPool(concurrentStatements);
-					for (ConcurrentStatement st : concurrentStatements)
-					{
-						st.addFailures();
-					}
-					evaluateStatement(createAfters(test), notifiers);
-					logPerformanceReport(concurrentStatements);
-					notifier.fireTestFinished(description);
-				}
+				notifier.fireTestIgnored(description);
 			}
-		}
-		catch (Throwable e)
-		{
-			for (FrameworkMethod method : getChildren())
+			else
 			{
-				final Description description = describeChild(method);
-				notifier.fireTestFailure(new Failure(description, e));
+				final List<ConcurrentStatement> concurrentStatements = createSingleConcurrentTest(method, notifier, notifiers, test);
+				evaluateStatement(createBefores(test), notifiers);
+				
+				// Mark test started
+				notifier.fireTestStarted(description);
+				reportingListeners.values().forEach(v ->{v.fireTestStarted(description);});
+				
+				try
+				{
+					executeInPool(concurrentStatements);
+				}
+				catch (Throwable e)
+				{
+					notifier.fireTestFailure(new Failure(description, e));
+					reportingListeners.values().forEach(v ->{v.fireTestFailure(description, e);});
+				}
+				
+				for (ConcurrentStatement st : concurrentStatements)
+				{
+					st.addFailures();
+				}
+				evaluateStatement(createAfters(test), notifiers);
+				
+				// Mark test finished
+				notifier.fireTestFinished(description);
+				reportingListeners.values().forEach(v ->{v.fireTestFinished(description);});
+				
+				// Log performance report
+				final PerformanceReport report = ReportGenerator.createPerformanceReport(method, concurrentStatements);
+				if (report != null)
+				{
+					reportingListeners.values().forEach(v ->{v.fireConcurrentTestFinished(test, method, report);});
+				}
 			}
 		}
 	}
 
-	private void executeInPool(final List<ConcurrentStatement> concurrentStatements) {
-		final ExecutorService pool = Executors.newFixedThreadPool(concurrentStatements.size());
-		for (ConcurrentStatement st : concurrentStatements)
-		{
-			final ConcurrentRunnable runnable = new ConcurrentRunnable(st);
-			pool.submit(runnable);
-		}
-		pool.shutdown();
+	private Object getTestInstance()
+	{
 		try
 		{
-			pool.awaitTermination(100, TimeUnit.SECONDS);
+			return super.createTest();
 		}
-		catch (InterruptedException e)
+		catch (Exception exc)
+		{
+			throw new RuntimeException(exc);
+		}
+	}
+
+	private void executeInPool(final List<ConcurrentStatement> concurrentStatements)
+	{
+		final ExecutorService pool = Executors.newFixedThreadPool(concurrentStatements.size());
+		final List<ConcurrentCallable> runnables = new ArrayList<>(concurrentStatements.size());
+		for (ConcurrentStatement st : concurrentStatements)
+		{
+			runnables.add(new ConcurrentCallable(st));
+		}
+		
+		try
+		{
+			List<Future<Void>> answers = pool.invokeAll(runnables);
+			for (Future<Void> f : answers)
+			{
+				f.get();
+			}
+			pool.shutdown();
+		}
+		catch (InterruptedException | ExecutionException e)
 		{
 			throw new RuntimeException(e);
 		}
@@ -141,7 +171,6 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 		final Description description = describeChild(method);
 	
 		final EachTestNotifier eachNotifier = new EachTestNotifier(notifier, description);
-		eachNotifier.fireTestStarted();
 		eachTestNotifierList.add(eachNotifier);
 		final Statement st = createMethodStatement(method, test);
 		
@@ -175,57 +204,7 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 		return concurrentStatements;
 	}
 
-	private void logPerformanceReport(final List<ConcurrentStatement> concurrentStatements)
-	{
-		long min = Long.MAX_VALUE;
-		long max = Long.MIN_VALUE;
-		long total = 0;
-		int invocations = 0;
-		final List<Long> median = new LinkedList<>();
-		for (ConcurrentStatement st : concurrentStatements)
-		{
-			final StopWatch.TaskInfo[] tasks = st.getStopWatch().getTaskInfo();
-			for (TaskInfo task : tasks)
-			{
-				if (task.getTaskName().startsWith(ConcurrentStatement.RUN_STAGE_NAME_PREFIX))
-				{
-					final long taskTime = task.getTimeMillis();
-					
-					min = Math.min(min, taskTime);
-					max = Math.max(max, taskTime);
-					median.add(taskTime);
-					total += taskTime;
-					invocations += 1;
-				}
-			}
-		}
-		if (! median.isEmpty())
-		{
-			Collections.sort(median);
-			final long medianValue = median.get((median.size() - 1) / 2);
-			final long averageValue = (long) (total / (double) median.size());
-			
-			final ConcurrentStatement st = concurrentStatements.iterator().next();
-			
-			logger.info("\n*** Total tests execution results across all threads ***"
-				+ "\nWarmup: \t" + formatNum(st.getWarmupRuns()) 
-				+ "\nRepeats: \t" + formatNum(st.getRepeats())
-				+ "\nConcurrency: \t" + formatNum(st.getConcurrency()) 
-				+ "\nInvocations: \t" + formatNum(invocations) 
-				+ "\nMin: \t\t" + formatNum(min) + " ms" 
-				+ "\nMax: \t\t" + formatNum(max) + " ms" 
-				+ "\nMedian: \t" + formatNum(medianValue) + " ms" 
-				+ "\nAverage: \t" + formatNum(averageValue) + " ms"
-				+ "\nTotal: \t\t" + formatNum(total) + " ms");
-		}
-	}
 
-	private String formatNum(Number num)
-	{
-		final DecimalFormat dec = new DecimalFormat();     
-		dec.setGroupingUsed(true);
-		return StringUtils.leftPad(dec.format(Long.parseLong(num.toString())), 6, ' ');
-	}
 
 	protected Statement createMethodStatement(FrameworkMethod method, Object test)
 	{

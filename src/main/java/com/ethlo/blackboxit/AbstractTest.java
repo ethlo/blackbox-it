@@ -1,38 +1,20 @@
 package com.ethlo.blackboxit;
 
-import static com.jayway.restassured.RestAssured.basic;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-import javax.sql.DataSource;
-
-import org.apache.commons.io.IOUtils;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.Stopwatch;
-import org.junit.rules.TestName;
-import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.PropertySource;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 import org.springframework.test.context.ContextConfiguration;
 
 import com.ethlo.blackboxit.AbstractTest.Cfg;
 import com.ethlo.blackboxit.reporting.JsonDumpReportingListener;
 import com.ethlo.blackboxit.reporting.LogbackReportingListener;
 import com.ethlo.blackboxit.reporting.ReportingListener;
-import com.jayway.restassured.RestAssured;
 
 import groovy.util.GroovyTestCase;
 
@@ -41,104 +23,24 @@ import groovy.util.GroovyTestCase;
 @PropertySource(value="classpath:application.properties")
 public abstract class AbstractTest extends GroovyTestCase
 {
-	private static final Logger logger = LoggerFactory.getLogger(AbstractTest.class);
-	
-	private static volatile boolean lastWasReadOnly = false;
-	
-	@Autowired
-	private DataSource dataSource;
-	
-	@Value("${tests.base-uri}")
-	private String baseURI;
-	
-	@Value("${tests.auth.defaultusername}")
-	private String defaultUsername;
-	
-	@Value("${tests.auth.defaultpassword}")
-	private String defaultPassword;
-	
-	@Rule public TestName name = new TestName();
-	
-    @Rule
-    public Stopwatch stopwatch = new Stopwatch()
-    {
-        @Override
-        protected void finished(long nanos, Description description)
-        {
-        	lastWasReadOnly = description.getAnnotation(ReadOnly.class) != null;
-        }
-    };
-	
-	private Resource[] scripts;
-	private String baseUrl;
-
-	protected AbstractTest()
-	{
-		this(new ClassPathResource("testdata.sql"));
-	}
-	
-	protected AbstractTest(Resource... scripts)
-	{
-		this.scripts = scripts;
-	}
-	
-	@Before
-	public final void reset()
-	{
-		RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
-		RestAssured.baseURI = baseURI;
-		RestAssured.authentication = basic(defaultUsername, defaultPassword);
-	
-		if (! lastWasReadOnly)
-		{
-			logger.debug("Last was not read-only, resetting test-data");
-			new ResourceDatabasePopulator(scripts).execute(dataSource);
-			
-			doReset();
-		}
-	}
-
-	/**
-	 * Empty method that can be overridden to listen for every time the tets-data is reset 
-	 */
-	protected void doReset()
-	{
-		
-	}
-	
-	protected String requestBody()
-	{
-		final Path path = Paths.get(getClass().getSimpleName().toLowerCase() + "/" + name.getMethodName() + "-req.json");
-		final ClassPathResource res = new ClassPathResource(path.toString());
-		try
-		{
-			return IOUtils.toString(res.getInputStream(), StandardCharsets.UTF_8);
-		}
-		catch (IOException e)
-		{
-			throw new RuntimeException("Unable to load body for method " + name.getMethodName(), e);
-		}
-	}
-	
-	protected String fullUrl(String relUrl)
-	{
-		return baseUrl + relUrl;
-	}
+	protected static final Logger logger = LoggerFactory.getLogger(AbstractTest.class);
 	
 	@EnableAutoConfiguration
 	@PropertySource("classpath:application.properties")
 	public static class Cfg
 	{
 		@Bean
+		@ConditionalOnProperty(name="blackbox-it.log", matchIfMissing=true)
 		public ReportingListener logbackReportingListener()
 		{
 			return new LogbackReportingListener();
 		}
 		
 		@Bean
-		public JsonDumpReportingListener jsonReportingListener()
+		@ConditionalOnProperty(name="blackbox-it.log.json")
+		public JsonDumpReportingListener jsonReportingListener(@Value(value="${blackbox-it.log.json.directory}") String path)
 		{
-			return new JsonDumpReportingListener(Paths.get(System.getProperty("user.home"), "blackbox-it", "testdata").toString());
+			return new JsonDumpReportingListener(path);
 		}
 	}
 }

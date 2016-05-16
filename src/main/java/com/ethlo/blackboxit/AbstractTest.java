@@ -12,6 +12,7 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.test.context.ContextConfiguration;
 
 import com.ethlo.blackboxit.AbstractTest.Cfg;
+import com.ethlo.blackboxit.client.HttpResultReporter;
 import com.ethlo.blackboxit.reporting.JsonDumpReportingListener;
 import com.ethlo.blackboxit.reporting.LogbackReportingListener;
 import com.ethlo.blackboxit.reporting.ReportingListener;
@@ -37,10 +38,17 @@ public abstract class AbstractTest extends GroovyTestCase
 		}
 		
 		@Bean
-		@ConditionalOnProperty(name="blackbox-it.log.json")
-		public JsonDumpReportingListener jsonReportingListener(@Value(value="${blackbox-it.log.json.directory}") String path)
+		@ConditionalOnProperty(name="blackbox-it.log.json.directory")
+		public ReportingListener jsonReportingListener(@Value(value="${blackbox-it.log.json.directory}") String path)
 		{
 			return new JsonDumpReportingListener(path);
+		}
+		
+		@Bean
+		@ConditionalOnProperty(name="blackbox-it.log.http-server.url")
+		public ReportingListener httpReportingListener(@Value(value="${blackbox-it.log.http-server.url}") String baseUrl)
+		{
+			return new HttpResultReporter(baseUrl);
 		}
 	}
 }

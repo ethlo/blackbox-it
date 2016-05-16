@@ -3,6 +3,7 @@ package com.ethlo.blackboxit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.After;
 import org.junit.Before;
@@ -100,6 +102,7 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 				notifier.fireTestStarted(description);
 				reportingListeners.values().forEach(v ->{v.fireTestStarted(description);});
 				
+				final AtomicBoolean success = new AtomicBoolean(true);
 				try
 				{
 					executeInPool(concurrentStatements);
@@ -108,12 +111,15 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 				{
 					notifier.fireTestFailure(new Failure(description, e));
 					reportingListeners.values().forEach(v ->{v.fireTestFailure(description, e);});
+					success.set(false);
 				}
 				
 				for (ConcurrentStatement st : concurrentStatements)
 				{
 					st.addFailures();
 				}
+				
+				final Date date = new Date();
 				evaluateStatement(createAfters(test), notifiers);
 				
 				// Mark test finished
@@ -124,7 +130,7 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 				final PerformanceReport report = ReportGenerator.createPerformanceReport(method, concurrentStatements);
 				if (report != null)
 				{
-					reportingListeners.values().forEach(v ->{v.fireConcurrentTestFinished(test, method, report);});
+					reportingListeners.values().forEach(v ->{v.fireConcurrentTestFinished(test, method, success.get(), date, report);});
 				}
 			}
 		}

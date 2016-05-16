@@ -1,5 +1,7 @@
 package com.ethlo.blackboxit.reporting;
 
+import java.util.Date;
+
 import org.junit.runner.Description;
 import org.junit.runners.model.FrameworkMethod;
 
@@ -13,5 +15,5 @@ public interface ReportingListener
 
 	void fireTestFinished(Description description);
 	
-	void fireConcurrentTestFinished(Object test, FrameworkMethod method, PerformanceReport report);
+	void fireConcurrentTestFinished(Object test, FrameworkMethod method, boolean success, Date date, PerformanceReport report);
 }

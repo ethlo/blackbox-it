@@ -3,6 +3,7 @@ package com.ethlo.blackboxit.reporting;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Date;
 
 import org.junit.runners.model.FrameworkMethod;
 
@@ -19,7 +20,7 @@ public class JsonDumpReportingListener extends ReportingAdapter
 	}
 	
 	@Override
-	public void fireConcurrentTestFinished(Object test, FrameworkMethod method, PerformanceReport report)
+	public void fireConcurrentTestFinished(Object test, FrameworkMethod method, boolean success, Date time, PerformanceReport report)
 	{
 		final Path path = Paths.get(targetPath, method.getName() + ".json");
 		path.getParent().toFile().mkdirs();

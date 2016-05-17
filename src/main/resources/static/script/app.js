@@ -1,20 +1,42 @@
-var jqxhr = $.getJSON("/blackbox/api/v1/results/?testId=1").done(function(data){renderChart(data)})
+var chart;
+var chartType = 'line';
+var fill = false;
 
-function renderChart(d) {
-	console.log(d)
+$.getJSON("/blackbox/api/v1/tests").done(function(data){renderTestList(data)})
+
+function renderTestList(data){
+	//console.log(data);
+	$.each(data.content, function(i, item) {
+        var $tr = $('<tr>').append(
+        	$('<td>').text(item.id),
+            $('<td>').text(item.name)
+        ).appendTo('#tests-table-body');
+        $tr.click(function(){
+        	renderChart(item.id); 
+        
+	        $('html, body').animate({
+	                scrollTop: $("#performance-results-header").offset().top - 60
+	            }, 200);
+	    });
+     });
+    };
+
+
+function renderChart(testId) {
+	
+	$.getJSON("/blackbox/api/v1/results/?testId=" + testId).done(function(d){
+	//console.log(d)
 	
 	var labels = [];
 	for (x in d.content) {
-		labels.push(new Date(d.content[x].timestamp).toISOString());
+		labels.push(new Date(d.content[x].timestamp).toISOString().substring(0,19));
 	}
-	
-	var fill = true;
-	
+		
 	var avg = {label: 'Average', 
 			data: [], 
 			fill:fill,
-			borderColor: "rgba(151,187,205,0.2)",
-	        backgroundColor: "rgba(151,187,205,1)",
+			borderColor: "rgba(57,106,177,1)",
+	        backgroundColor: "rgba(57,106,177,1)",
 	        pointColor: "rgba(151,187,205,1)",
 	        pointStrokeColor: "#fff",
 	        pointHighlightFill: "#fff",
@@ -23,8 +45,8 @@ function renderChart(d) {
 	var min = {label: 'Min', 
 			data: [],
 			fill:fill,
-			borderColor: "rgba(70,191,189,0.2)",
-	        backgroundColor: "rgba(70,191,189,1)",
+			borderColor: "rgba(62,150,81,1)",
+	        backgroundColor: "rgba(62,150,81,1)",
 	        pointColor: "rgba(70,191,189,1)",
 	        pointStrokeColor: "#fff",
 	        pointHighlightFill: "#fff",
@@ -33,8 +55,8 @@ function renderChart(d) {
 	var max = {label: 'Max', 
 			data: [], 
 			fill:fill,
-			borderColor: "rgba(247,70,74,0.2)",
-			backgroundColor: "rgba(247,70,74,0.2)",
+			borderColor: "rgba(204,37,41,1)",
+			backgroundColor: "rgba(204,37,41,1)",
 	        strokeColor: "rgba(247,70,74,1)",
 	        pointColor: "rgba(247,70,74,1)",
 	        pointStrokeColor: "#fff",
@@ -43,8 +65,8 @@ function renderChart(d) {
 	var deviation = {label: 'Deviation', 
 			data: [],
 			fill:fill,
-			borderColor: "rgba(75,192,192,0.4)",
-			backgroundColor: "rgba(75,192,192,0.4)",
+			borderColor: "rgba(75,192,192,1)",
+			backgroundColor: "rgba(75,192,192,1)",
 			strokeColor: "rgba(247,70,74,1)",
 	        pointColor: "rgba(247,70,74,1)",
 	        pointStrokeColor: "#fff",
@@ -62,12 +84,16 @@ function renderChart(d) {
 	var testName = 'Test ' + d.content[0].test.name;
 	$("#performance-results-header").html(testName)
 	
-  var codesChart = new Chart($("#performance-results"), {
-	type: 'bar',
+	if (chart){
+		chart.destroy();
+	}
+  chart = new Chart($("#performance-results"), {
+	type: chartType,
 	data: {
 		labels: labels,
 		datasets: [min, avg,  max, deviation]
 	},
 	options: {scaleStartValue : 0 }
   });
+	});
 }

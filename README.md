@@ -8,8 +8,8 @@ One-stop system for testing REST/HTTP end-points ([Rest Assured](https://github.
 
 ## Features ##
 * Supports multithreaded/concurrent test executions using a simple `@Concurrent` annotation. Useful for detecting race-conditions/deadlocks/timing issues or testing performance.
-* Reloads testdata.sql between API invocations using direct database connection
-* Sorts tests by `@Readonly` annotation so the number of database reloads is kept to a minimum
+* Pluggable data reload between API invocations using direct database connection, REST calls, "you name it"
+* Sorts tests by `@Readonly` annotation so the number of data reloads is kept to a minimum
 
 ## Quick start ##
 Create a test and annotate it as you would your normal JUnit tests.

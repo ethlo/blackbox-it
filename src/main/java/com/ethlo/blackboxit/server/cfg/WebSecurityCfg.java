@@ -36,6 +36,7 @@ public class WebSecurityCfg extends WebSecurityConfigurerAdapter
             	.and()
             .formLogin()
                 .loginPage("/login.html")
+                .loginProcessingUrl("/dologin")
                 .permitAll()
                 .and()
             .logout()

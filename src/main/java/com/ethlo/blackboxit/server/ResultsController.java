@@ -1,5 +1,8 @@
 package com.ethlo.blackboxit.server;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.transaction.Transactional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.ethlo.blackboxit.model.Test;
 import com.ethlo.blackboxit.model.TestPerformance;
 import com.ethlo.blackboxit.model.TestRun;
+import com.ethlo.blackboxit.reporting.PerformanceReport;
 import com.ethlo.blackboxit.server.dao.PerformanceResultDao;
 import com.ethlo.blackboxit.server.dao.TestDao;
 import com.ethlo.blackboxit.server.dao.TestEnvironmentDao;
@@ -38,7 +42,7 @@ public class ResultsController
 	private TestEnvironmentDao testEnvironmentDao;
 	
 	@RequestMapping(value="/results", method=RequestMethod.GET)
-	public Page<TestRun> getPerformanceReports(@RequestParam(value="testId", required=false) Integer testId, Pageable pageable)
+	public Page<TestRun> getResults(@RequestParam(value="testId", required=false) Integer testId, Pageable pageable)
 	{
 		if (testId != null)
 		{
@@ -51,6 +55,18 @@ public class ResultsController
 		}
 		return this.testResultDao.findAll(pageable);
 	}
+	
+	@RequestMapping(value="/results/performance", method=RequestMethod.GET)
+	public Page<TestPerformance> getPerformanceResults(@RequestParam(value="testId") int testId, Pageable pageable)
+	{
+		final Test test = testDao.findOne(testId);
+		if (test != null)
+		{
+			return this.performanceResultDao.findAllByTestId(test.getId(), pageable);
+		}
+		throw new EmptyResultDataAccessException("No test with ID " + testId, 1);
+	}
+
 	
 	@RequestMapping(value="/tests", method=RequestMethod.GET)
 	public Page<Test> getTests(@RequestParam(value="nameFilter", required=false) String nameFilter, Pageable pageable)

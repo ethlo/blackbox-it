@@ -1,12 +1,15 @@
-# blackbox-it
-Blackbox Test Suite
+# Blackbox IT
 
-Simple one-stop project for using [Rest Assured](https://github.com/jayway/rest-assured), concurrency testing and repeatable full-stack tests.
+NOTE: Alpha quality and under (very) active development. Feedback and bug-reports most appreciated!
+
+One-stop system for testing REST/HTTP end-points ([Rest Assured](https://github.com/jayway/rest-assured)), concurrency testing (Threaded execution) and repeatable unit/integration/regression/full-stack tests. Featuring persistent test-result logging and UI for browsing results. 
+
+![WIP screenshot](https://raw.githubusercontent.com/ethlo/blackbox-it/server/docs/img/screenshot_01_alpha.png)
 
 ## Features ##
 * Supports multithreaded/concurrent test executions using a simple `@Concurrent` annotation. Useful for detecting race-conditions/deadlocks/timing issues or testing performance.
-* Reloads testdata.sql between API invocations using direct database connection
-* Sorts tests by `@Readonly` annotation so the number of database reloads is kept to a minimum
+* Pluggable data reload between API invocations using direct database connection, REST calls, "you name it"
+* Sorts tests by `@Readonly` annotation so the number of data reloads is kept to a minimum
 
 ## Quick start ##
 Create a test and annotate it as you would your normal JUnit tests.

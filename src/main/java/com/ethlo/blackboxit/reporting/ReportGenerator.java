@@ -17,11 +17,6 @@ public class ReportGenerator
 {
 	public static PerformanceReport createPerformanceReport(FrameworkMethod method, final List<ConcurrentStatement> concurrentStatements)
 	{
-		if (method.getAnnotation(Concurrent.class) == null)
-		{
-			return null;
-		}
-		
 		long total = 0;
 		int invocations = 0;
 		final List<Long> taskTimings = new LinkedList<>();

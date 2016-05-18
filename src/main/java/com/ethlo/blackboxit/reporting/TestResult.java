@@ -55,4 +55,10 @@ public class TestResult
 	{
 		return timestamp;
 	}
+
+	@Override
+	public String toString() {
+		return "TestResult [description=" + description + ", performanceReport=" + performanceReport + ", error="
+				+ error + ", timestamp=" + timestamp + "]";
+	}
 }

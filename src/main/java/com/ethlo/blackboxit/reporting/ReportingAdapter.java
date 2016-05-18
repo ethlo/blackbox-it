@@ -14,5 +14,5 @@ public class ReportingAdapter implements ReportingListener
 	public void fireTestFailure(Description description, Throwable e) {}
 	
 	@Override
-	public void fireTestFinished(TestResult testResult) {}	
+	public void fireTestFinished(TestResult testResult) {}
 }

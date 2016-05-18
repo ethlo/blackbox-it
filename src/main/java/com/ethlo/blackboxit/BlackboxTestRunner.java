@@ -13,6 +13,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -37,9 +38,7 @@ import com.ethlo.blackboxit.concurrent.Concurrent;
 import com.ethlo.blackboxit.concurrent.ConcurrentCallable;
 import com.ethlo.blackboxit.concurrent.ConcurrentStatement;
 import com.ethlo.blackboxit.concurrent.EmptyStatement;
-import com.ethlo.blackboxit.concurrent.StatementEvaluator;
 import com.ethlo.blackboxit.concurrent.StatementList;
-import com.ethlo.blackboxit.concurrent.TestResult;
 import com.ethlo.blackboxit.reporting.PerformanceReport;
 import com.ethlo.blackboxit.reporting.ReportGenerator;
 import com.ethlo.blackboxit.reporting.ReportingListener;
@@ -107,16 +106,14 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 				{
 					executeInPool(concurrentStatements);
 				}
-				catch (Throwable e)
+				catch (Throwable exc)
 				{
-					notifier.fireTestFailure(new Failure(description, e));
-					reportingListeners.values().forEach(v ->{v.fireTestFailure(description, e);});
+					final Throwable cause = ExceptionUtils.getRootCause(exc) != null ? ExceptionUtils.getRootCause(exc) : exc;
+					
+					notifier.fireTestFailure(new Failure(description, cause));
+					notifiers.forEach(n->{n.fireTestFinished();});
+					reportingListeners.values().forEach(v ->{v.fireTestFailure(description, cause);});
 					success.set(false);
-				}
-				
-				for (ConcurrentStatement st : concurrentStatements)
-				{
-					st.addFailures();
 				}
 				
 				final Date date = new Date();
@@ -127,10 +124,13 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 				reportingListeners.values().forEach(v ->{v.fireTestFinished(description);});
 				
 				// Log performance report
-				final PerformanceReport report = ReportGenerator.createPerformanceReport(method, concurrentStatements);
-				if (report != null)
+				if (success.get())
 				{
-					reportingListeners.values().forEach(v ->{v.fireConcurrentTestFinished(test, method, success.get(), date, report);});
+					final PerformanceReport report = ReportGenerator.createPerformanceReport(method, concurrentStatements);
+					if (report != null)
+					{
+						reportingListeners.values().forEach(v ->{v.fireConcurrentTestFinished(test, method, success.get(), date, report);});
+					}
 				}
 			}
 		}
@@ -148,7 +148,7 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 		}
 	}
 
-	private void executeInPool(final List<ConcurrentStatement> concurrentStatements)
+	private void executeInPool(final List<ConcurrentStatement> concurrentStatements) throws Throwable
 	{
 		final ExecutorService pool = Executors.newFixedThreadPool(concurrentStatements.size());
 		final List<ConcurrentCallable> runnables = new ArrayList<>(concurrentStatements.size());
@@ -156,19 +156,22 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 		{
 			runnables.add(new ConcurrentCallable(st));
 		}
-		
+
 		try
 		{
-			List<Future<Void>> answers = pool.invokeAll(runnables);
+			final List<Future<Void>> answers = pool.invokeAll(runnables);
 			for (Future<Void> f : answers)
 			{
 				f.get();
 			}
-			pool.shutdown();
 		}
-		catch (InterruptedException | ExecutionException e)
+		catch (ExecutionException e)
 		{
-			throw new RuntimeException(e);
+			throw e.getCause();
+		}
+		finally
+		{
+			pool.shutdown();
 		}
 	}
 
@@ -187,7 +190,7 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 		}
 		else
 		{
-			return Collections.singletonList(new ConcurrentStatement(st, eachNotifier, 1, 0, 1));
+			return Collections.singletonList(new ConcurrentStatement(st, 1, 0, 1));
 		}
 	}
 
@@ -205,7 +208,7 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 		final List<ConcurrentStatement> concurrentStatements = new ArrayList<>();
 		for (int i = 0; i < threads; i++)
 		{
-			concurrentStatements.add(new ConcurrentStatement(st, eachNotifier, repeats, warmupRuns, threads));
+			concurrentStatements.add(new ConcurrentStatement(st, repeats, warmupRuns, threads));
 		}
 		return concurrentStatements;
 	}
@@ -267,10 +270,11 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 
 	private void evaluateStatement(Statement statement, List<EachTestNotifier> eachTestNotifierList)
 	{
-		final TestResult testResult = StatementEvaluator.evaluateStatement(statement);
-		for (EachTestNotifier eachTestNotifier : eachTestNotifierList)
-		{
-			testResult.addTestNotifier(eachTestNotifier);
+		try {
+			statement.evaluate();
+		} catch (Throwable e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 	

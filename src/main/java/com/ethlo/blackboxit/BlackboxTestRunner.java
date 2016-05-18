@@ -3,7 +3,6 @@ package com.ethlo.blackboxit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +10,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.junit.After;
@@ -42,6 +40,7 @@ import com.ethlo.blackboxit.concurrent.StatementList;
 import com.ethlo.blackboxit.reporting.PerformanceReport;
 import com.ethlo.blackboxit.reporting.ReportGenerator;
 import com.ethlo.blackboxit.reporting.ReportingListener;
+import com.ethlo.blackboxit.reporting.TestResult;
 
 public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 {
@@ -101,39 +100,40 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 				notifier.fireTestStarted(description);
 				reportingListeners.values().forEach(v ->{v.fireTestStarted(description);});
 				
-				final AtomicBoolean success = new AtomicBoolean(true);
+				Throwable testError = null;
 				try
 				{
 					executeInPool(concurrentStatements);
 				}
 				catch (Throwable exc)
 				{
-					final Throwable cause = ExceptionUtils.getRootCause(exc) != null ? ExceptionUtils.getRootCause(exc) : exc;
-					
-					notifier.fireTestFailure(new Failure(description, cause));
+					testError = getCause(exc);
+					notifier.fireTestFailure(new Failure(description, testError));
 					notifiers.forEach(n->{n.fireTestFinished();});
-					reportingListeners.values().forEach(v ->{v.fireTestFailure(description, cause);});
-					success.set(false);
+					final Throwable e = testError;
+					reportingListeners.values().forEach(v ->{v.fireTestFailure(description, e);});
 				}
 				
-				final Date date = new Date();
 				evaluateStatement(createAfters(test), notifiers);
 				
 				// Mark test finished
 				notifier.fireTestFinished(description);
-				reportingListeners.values().forEach(v ->{v.fireTestFinished(description);});
 				
-				// Log performance report
-				if (success.get())
+				PerformanceReport performanceReport = null;
+				if (testError == null)
 				{
-					final PerformanceReport report = ReportGenerator.createPerformanceReport(method, concurrentStatements);
-					if (report != null)
-					{
-						reportingListeners.values().forEach(v ->{v.fireConcurrentTestFinished(test, method, success.get(), date, report);});
-					}
+					performanceReport = ReportGenerator.createPerformanceReport(method, concurrentStatements);
 				}
+				final TestResult result = testError == null ? TestResult.success(description, performanceReport) : TestResult.error(description, testError);
+				reportingListeners.values().forEach(v ->{v.fireTestFinished(result);});
 			}
 		}
+	}
+
+	private Throwable getCause(Throwable exc)
+	{
+		final Throwable t = ExceptionUtils.getRootCause(exc);
+		return t != null ? t : exc;
 	}
 
 	private Object getTestInstance()

@@ -7,7 +7,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -46,9 +45,12 @@ public abstract class AbstractTest extends GroovyTestCase
 		
 		@Bean
 		@ConditionalOnProperty(name="blackbox-it.log.http-server.url")
-		public ReportingListener httpReportingListener(@Value(value="${blackbox-it.log.http-server.url}") String baseUrl)
+		public ReportingListener httpReportingListener(
+			@Value(value="${blackbox-it.log.http-server.url}") String url,
+			@Value(value="${blackbox-it.log.http-server.username}") String username,
+			@Value(value="${blackbox-it.log.http-server.password}") String password)
 		{
-			return new HttpResultReporter(baseUrl);
+			return new HttpResultReporter(url, username, password);
 		}
 	}
 }

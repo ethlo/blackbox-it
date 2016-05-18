@@ -1,9 +1,6 @@
 package com.ethlo.blackboxit.reporting;
 
-import java.util.Date;
-
 import org.junit.runner.Description;
-import org.junit.runners.model.FrameworkMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,14 +27,8 @@ public class LogbackReportingListener implements ReportingListener
 	}
 
 	@Override
-	public void fireTestFinished(Description description)
+	public void fireTestFinished(TestResult testResult)
 	{
-		logger.info("Finished test {}", description);
-	}
-
-	@Override
-	public void fireConcurrentTestFinished(Object test, FrameworkMethod method, boolean success, Date time, PerformanceReport report)
-	{
-		logger.info("Performance report for {}: {}", method, report);
+		logger.info("Finished test {}", testResult);
 	}
 }

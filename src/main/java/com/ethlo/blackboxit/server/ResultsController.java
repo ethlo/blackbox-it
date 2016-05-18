@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -57,7 +58,7 @@ public class ResultsController
 	}
 	
 	@RequestMapping(value="/results/performance", method=RequestMethod.GET)
-	public Page<TestPerformance> getPerformanceResults(@RequestParam(value="testId") int testId, Pageable pageable)
+	public Page<TestPerformance> getPerformanceResults(@RequestParam(value="testId") int testId, @PageableDefault(sort="name|asc") Pageable pageable)
 	{
 		final Test test = testDao.findOne(testId);
 		if (test != null)

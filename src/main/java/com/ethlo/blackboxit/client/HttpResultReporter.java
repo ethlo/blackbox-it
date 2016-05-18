@@ -1,44 +1,58 @@
 package com.ethlo.blackboxit.client;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Date;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.tomcat.util.codec.binary.Base64;
-import org.junit.runners.model.FrameworkMethod;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
-import com.ethlo.blackboxit.reporting.PerformanceReport;
 import com.ethlo.blackboxit.reporting.ReportingAdapter;
+import com.ethlo.blackboxit.reporting.TestResult;
 import com.ethlo.blackboxit.server.TestResultDto;
 
 public class HttpResultReporter extends ReportingAdapter
 {
 	private final String url;
+	private final String username;
+	private final String password;
+	
 	private RestTemplate restTemplate;
 	
-	public HttpResultReporter(String url)
+	public HttpResultReporter(String url, String username, String password)
 	{
 		this.url = url;
+		this.username = username;
+		this.password = password;
 		this.restTemplate = new RestTemplate();
 	}
 	
 	@Override
-	public void fireConcurrentTestFinished(Object test, FrameworkMethod method, boolean success, Date time, PerformanceReport performanceReport)
+	public void fireTestFinished(TestResult testResult)
 	{
-		final TestResultDto testResult = new TestResultDto();
-		testResult.setTestName(method.getName());
-		testResult.setPerformance(performanceReport);
-		testResult.setTimestamp(time);
-		testResult.setSuccess(success);
+		final TestResultDto t = new TestResultDto();
+		t.setTestName(getTestName(testResult));
+		t.setPerformance(testResult.getPerformanceReport());
+		t.setTimestamp(testResult.getTimestamp());
+		t.setSuccess(testResult.getError() == null);
 		
 		final HttpHeaders headers = new HttpHeaders();
-		headers.set("Authorization", "Basic " + Base64.encodeBase64String("user:password".getBytes(StandardCharsets.UTF_8)));
+		
+		if (StringUtils.hasLength(username))
+		{
+			headers.set("Authorization", "Basic " + Base64.encodeBase64String((username + ":" + password).getBytes(StandardCharsets.UTF_8)));
+		}
 		headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
-		final HttpEntity<TestResultDto> entity = new HttpEntity<>(testResult, headers);
+		final HttpEntity<TestResultDto> entity = new HttpEntity<>(t, headers);
 		restTemplate.exchange(url, HttpMethod.POST, entity, Object.class);
+	}
+
+	private String getTestName(TestResult testResult)
+	{
+		return FilenameUtils.getName(StringUtils.replace(testResult.getDescription().getClassName(), ".", "/")) + "." + testResult.getDescription().getMethodName();
 	}
 }

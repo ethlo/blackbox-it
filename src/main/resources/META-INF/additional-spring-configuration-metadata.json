@@ -1,0 +1,17 @@
+{"properties": [
+  {
+    "name": "blackbox-it.log.http-server.password",
+    "type": "java.lang.String",
+    "description": "The password used to authenticate against the test result server"
+  },
+  {
+    "name": "blackbox-it.log.http-server.username",
+    "type": "java.lang.String",
+    "description": "The username used to authenticate against the test result server"
+  },
+  {
+    "name": "blackbox-it.log.http-server.url",
+    "type": "java.lang.String",
+    "description": "The URL of the server to POST the results to"
+  }
+]}

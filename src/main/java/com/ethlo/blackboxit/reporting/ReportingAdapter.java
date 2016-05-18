@@ -1,9 +1,6 @@
 package com.ethlo.blackboxit.reporting;
 
-import java.util.Date;
-
 import org.junit.runner.Description;
-import org.junit.runners.model.FrameworkMethod;
 
 public class ReportingAdapter implements ReportingListener
 {
@@ -17,8 +14,5 @@ public class ReportingAdapter implements ReportingListener
 	public void fireTestFailure(Description description, Throwable e) {}
 	
 	@Override
-	public void fireTestFinished(Description description) {}
-	
-	@Override
-	public void fireConcurrentTestFinished(Object test, FrameworkMethod method, boolean success, Date time, PerformanceReport report){}
+	public void fireTestFinished(TestResult testResult) {}	
 }

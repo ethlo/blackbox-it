@@ -10,7 +10,7 @@ import org.junit.runners.model.FrameworkMethod;
 import org.springframework.util.StopWatch;
 import org.springframework.util.StopWatch.TaskInfo;
 
-import com.ethlo.blackboxit.concurrent.Concurrent;
+import com.ethlo.blackboxit.annotations.Concurrent;
 import com.ethlo.blackboxit.concurrent.ConcurrentStatement;
 
 public class ReportGenerator

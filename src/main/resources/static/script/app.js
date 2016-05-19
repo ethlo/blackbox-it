@@ -7,9 +7,22 @@ $.getJSON("/blackbox/api/v1/tests?size=50").done(function(data){renderTestList(d
 function renderTestList(data){
 	//console.log(data);
 	$.each(data.content, function(i, item) {
+
+		var tagLinks = [];
+		var arr = item.tags.split(',');
+		for (i in arr){
+			tagLinks.push($('<a>').attr('href', '#tag:' + arr[i]).text('#' + arr[i]).css('padding-right', '6px').css('white-space', 'nowrap'));
+		}
+		
+		console.log(tagLinks)
+		
         var $tr = $('<tr>').append(
         	$('<td>').text(item.id),
-            $('<td>').text(item.name)
+            $('<td>').text(item.name).attr('title', item.testClass + '.' + item.methodName + '()'),
+            $('<td>').text(item.concurrency),
+            $('<td>').text(item.repeats),
+            $('<td>').text(item.warmupRuns),
+            $('<td>').append(tagLinks)
         ).appendTo('#tests-table-body');
         $tr.click(function(){
         	renderChart(item.id); 

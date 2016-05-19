@@ -19,19 +19,7 @@ public class TestPerformance
     @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-
-	@Column(name="warmup_runs")
-	private int warmupRuns;
-
-	@Column(name="repeats")
-	private int repeats;
 	
-	@Column(name="concurrency")
-	private int concurrency;
-	
-	@Column(name="incocations")
-	private int invocations;
-
 	@Column(name="min")
 	private long min;
 	
@@ -55,39 +43,10 @@ public class TestPerformance
 	public TestPerformance(PerformanceReport performance)
 	{
 		this.average = performance.getAverage();
-		this.concurrency = performance.getConcurrency();
-		this.invocations = performance.getInvocations();
 		this.max = performance.getMax();
 		this.min = performance.getMin();
 		this.median = performance.getMedian();
-		this.repeats = performance.getRepeats();
 		this.standardDeviation = performance.getStandardDeviation();
-		this.warmupRuns = performance.getWarmupRuns();
-	}
-
-	public int getWarmupRuns()
-	{
-		return warmupRuns;
-	}
-
-	public int getRepeats()
-	{
-		return repeats;
-	}
-
-	public int getConcurrency()
-	{
-		return concurrency;
-	}
-
-	public int getInvocations()
-	{
-		return invocations;
-	}
-
-	public void setInvocations(int invocations)
-	{
-		this.invocations = invocations;
 	}
 
 	public long getMin()
@@ -124,11 +83,7 @@ public class TestPerformance
 	public String toString()
 	{
 		return 
-			"\nWarmup: \t" + formatNum(warmupRuns) 
-			+ "\nRepeats: \t" + formatNum(repeats)
-			+ "\nConcurrency: \t" + formatNum(concurrency) 
-			+ "\nInvocations: \t" + formatNum(invocations) 
-			+ "\nMin: \t\t" + formatNum(min) + " ms" 
+				"Min: \t\t" + formatNum(min) + " ms" 
 			+ "\nMax: \t\t" + formatNum(max) + " ms" 
 			+ "\nMedian: \t" + formatNum(median) + " ms" 
 			+ "\nAverage: \t" + formatNum(average) + " ms"

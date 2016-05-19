@@ -11,10 +11,11 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.test.context.ContextConfiguration;
 
 import com.ethlo.blackboxit.AbstractTest.Cfg;
-import com.ethlo.blackboxit.client.HttpResultReporter;
+import com.ethlo.blackboxit.reporting.HttpResultReporter;
 import com.ethlo.blackboxit.reporting.JsonDumpReportingListener;
 import com.ethlo.blackboxit.reporting.LogbackReportingListener;
 import com.ethlo.blackboxit.reporting.ReportingListener;
+import com.ethlo.blackboxit.testrunner.BlackboxTestRunner;
 
 import groovy.util.GroovyTestCase;
 

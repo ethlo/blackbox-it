@@ -13,5 +13,10 @@
     "name": "blackbox-it.log.http-server.url",
     "type": "java.lang.String",
     "description": "The URL of the server to POST the results to"
+  },
+  {
+    "name": "blackbox-it.tags.default",
+    "type": "java.lang.String",
+    "description": "The default tag(s) to apply to tests. Can be used to tag the origin, like application or module name"
   }
 ]}

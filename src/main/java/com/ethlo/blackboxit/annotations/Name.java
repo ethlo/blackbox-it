@@ -1,4 +1,4 @@
-package com.ethlo.blackboxit;
+package com.ethlo.blackboxit.annotations;
 
 
 import java.lang.annotation.ElementType;
@@ -7,10 +7,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Marker to indicate that the test method does not modify the data, so reloading the test data is unnecessary.
+ * Allows override of test name
  * 
  * @author Morten Haraldsen
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.METHOD})
-public @interface ReadOnly{}
+public @interface Name{
+	String value();
+}

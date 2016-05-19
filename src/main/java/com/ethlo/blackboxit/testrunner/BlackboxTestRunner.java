@@ -1,11 +1,14 @@
-package com.ethlo.blackboxit;
+package com.ethlo.blackboxit.testrunner;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -26,13 +29,18 @@ import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.Statement;
+import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.TestContextManager;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.test.context.support.DefaultTestContext;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
-import com.ethlo.blackboxit.concurrent.Concurrent;
+import com.ethlo.blackboxit.annotations.Concurrent;
+import com.ethlo.blackboxit.annotations.Name;
+import com.ethlo.blackboxit.annotations.ReadOnly;
+import com.ethlo.blackboxit.annotations.Tag;
 import com.ethlo.blackboxit.concurrent.ConcurrentCallable;
 import com.ethlo.blackboxit.concurrent.ConcurrentStatement;
 import com.ethlo.blackboxit.concurrent.EmptyStatement;
@@ -79,7 +87,9 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 		// Get application context
 		final TestContextManager testCtx = getTestContextManager();
 		final DefaultTestContext dtc = (DefaultTestContext) ReflectionTestUtils.getField(testCtx, "testContext");
-		final Map<String, ReportingListener> reportingListeners = dtc.getApplicationContext().getBeansOfType(ReportingListener.class);
+		final ApplicationContext appCtx = dtc.getApplicationContext();
+		final String defaultTags = appCtx.getEnvironment().getProperty("blackbox-it.tags.default", "");
+		final Map<String, ReportingListener> reportingListeners = appCtx.getBeansOfType(ReportingListener.class);
 
 		reportingListeners.values().forEach(v ->{v.started(test);});
 		
@@ -119,12 +129,14 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 				// Mark test finished
 				notifier.fireTestFinished(description);
 				
-				PerformanceReport performanceReport = null;
-				if (testError == null)
-				{
-					performanceReport = ReportGenerator.createPerformanceReport(method, concurrentStatements);
-				}
-				final TestResult result = testError == null ? TestResult.success(description, performanceReport) : TestResult.error(description, testError);
+				final String testName = method.getAnnotation(Name.class) != null ? method.getAnnotation(Name.class).value() : null;
+				final String[] tags = method.getAnnotation(Tag.class) != null ? method.getAnnotation(Tag.class).value() : new String[0];
+				final Set<String> allTags = new TreeSet<>();
+				allTags.addAll(Arrays.asList(tags));
+				allTags.addAll(Arrays.asList(StringUtils.commaDelimitedListToStringArray(defaultTags)));
+				
+				final PerformanceReport performanceReport = testError == null ? ReportGenerator.createPerformanceReport(method, concurrentStatements) : null;
+				final TestResult result = testError == null ? TestResult.success(testName, allTags, description, performanceReport) : TestResult.error(testName, allTags, description, testError);
 				reportingListeners.values().forEach(v ->{v.fireTestFinished(result);});
 			}
 		}

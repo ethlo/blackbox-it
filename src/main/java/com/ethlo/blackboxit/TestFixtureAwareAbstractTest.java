@@ -9,6 +9,7 @@ import org.junit.runner.Description;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 
+import com.ethlo.blackboxit.annotations.ReadOnly;
 import com.ethlo.blackboxit.fixture.DataHandler;
 
 public abstract class TestFixtureAwareAbstractTest extends AbstractTest

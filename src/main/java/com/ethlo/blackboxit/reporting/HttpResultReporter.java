@@ -1,4 +1,4 @@
-package com.ethlo.blackboxit.client;
+package com.ethlo.blackboxit.reporting;
 
 import java.nio.charset.StandardCharsets;
 
@@ -11,8 +11,6 @@ import org.springframework.http.MediaType;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
-import com.ethlo.blackboxit.reporting.ReportingAdapter;
-import com.ethlo.blackboxit.reporting.TestResult;
 import com.ethlo.blackboxit.server.TestResultDto;
 
 public class HttpResultReporter extends ReportingAdapter
@@ -35,10 +33,17 @@ public class HttpResultReporter extends ReportingAdapter
 	public void fireTestFinished(TestResult testResult)
 	{
 		final TestResultDto t = new TestResultDto();
-		t.setTestName(getTestName(testResult));
+		t.setMethodName(getTestName(testResult));
 		t.setPerformance(testResult.getPerformanceReport());
 		t.setTimestamp(testResult.getTimestamp());
 		t.setSuccess(testResult.getError() == null);
+		t.setTags(testResult.getTags());
+		t.setName(testResult.getName());
+		t.setTestClass(testResult.getDescription().getClassName());
+		t.setMethodName(testResult.getDescription().getMethodName());
+		t.setConcurrency(testResult.getPerformanceReport().getConcurrency());
+		t.setRepeats(testResult.getPerformanceReport().getRepeats());
+		t.setWarmupRuns(testResult.getPerformanceReport().getWarmupRuns());
 		
 		final HttpHeaders headers = new HttpHeaders();
 		

@@ -1,4 +1,4 @@
-package com.ethlo.blackboxit.concurrent;
+package com.ethlo.blackboxit.annotations;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

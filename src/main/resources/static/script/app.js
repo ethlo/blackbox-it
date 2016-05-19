@@ -1,3 +1,4 @@
+var lasttr = false
 var chart;
 var chartType = 'line';
 var fill = false;
@@ -14,7 +15,20 @@ function renderTestList(data){
 			tagLinks.push($('<a>').attr('href', '#tag:' + arr[i]).text('#' + arr[i]).css('padding-right', '6px').css('white-space', 'nowrap'));
 		}
 		
-		console.log(tagLinks)
+		function render() {
+        	if (lasttr) {
+        		lasttr.remove();
+        	}
+        		
+        	lasttr = $('<tr>')
+        		.append($('<td>')
+        				.attr('colspan', '6')
+        					.append($('<canvas>').attr('id', 'performance-results')));
+        	console.log(lasttr.html());
+        	lasttr.insertAfter($(this).closest('tr'))
+        	
+        	renderChart(item.id); 
+	    }
 		
         var $tr = $('<tr>').append(
         	$('<td>').text(item.id),
@@ -22,15 +36,11 @@ function renderTestList(data){
             $('<td>').text(item.concurrency),
             $('<td>').text(item.repeats),
             $('<td>').text(item.warmupRuns),
-            $('<td>').append(tagLinks)
+            $('<td>').append(tagLinks),
+            $('<td>').append(
+            	$('<a>')
+            		.append($('<img>').attr('src', 'img/chart.png')).click(render))
         ).appendTo('#tests-table-body');
-        $tr.click(function(){
-        	renderChart(item.id); 
-        
-	        $('html, body').animate({
-	                scrollTop: $("#performance-results-header").offset().top - 60
-	            }, 200);
-	    });
      });
     };
 
@@ -119,7 +129,7 @@ function renderChart(testId) {
 	}
 	
 	var testName = 'Test ' + d.content[0].test.name;
-	$("#performance-results-header").html(testName)
+	//$("#performance-results-header").html(testName)
 	
 	if (chart){
 		chart.destroy();

@@ -1,6 +1,7 @@
 package com.ethlo.blackboxit.reporting;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.tomcat.util.codec.binary.Base64;
@@ -34,16 +35,18 @@ public class HttpResultReporter extends ReportingAdapter
 	{
 		final TestResultDto t = new TestResultDto();
 		t.setMethodName(getTestName(testResult));
-		t.setPerformance(testResult.getPerformanceReport());
+		
+		final Optional<PerformanceReport> perf = testResult.getPerformanceReport();
+		t.setPerformance(perf);
 		t.setTimestamp(testResult.getTimestamp());
 		t.setSuccess(testResult.getError() == null);
 		t.setTags(testResult.getTags());
 		t.setName(testResult.getName());
 		t.setTestClass(testResult.getDescription().getClassName());
 		t.setMethodName(testResult.getDescription().getMethodName());
-		t.setConcurrency(testResult.getPerformanceReport().getConcurrency());
-		t.setRepeats(testResult.getPerformanceReport().getRepeats());
-		t.setWarmupRuns(testResult.getPerformanceReport().getWarmupRuns());
+		t.setConcurrency(perf.isPresent() ? perf.get().getConcurrency() : 1);
+		t.setRepeats(perf.isPresent() ? perf.get().getRepeats() : 0);
+		t.setWarmupRuns(perf.isPresent() ? perf.get().getWarmupRuns() : 0);
 		
 		final HttpHeaders headers = new HttpHeaders();
 		

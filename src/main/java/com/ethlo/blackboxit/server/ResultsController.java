@@ -77,7 +77,13 @@ public class ResultsController
 		tss.setName(nameFilter);
 		tss.setTag(tagFilter);
 		
-		return  testDao.findAll(tss, pageable);
+		return testDao.findAll(tss, pageable);
+	}
+	
+	@RequestMapping(value="/analysis/varyingperformance", method=RequestMethod.GET)
+	public Page<Test> analysisVaryingPerformance(Pageable pageable)
+	{
+		return testResultDao.getAnalysisVaryingPerformance(pageable);
 	}
 
 	@RequestMapping(value="/results", method=RequestMethod.POST)
@@ -86,9 +92,9 @@ public class ResultsController
 		final Test test = ensureTestExists(testResultDto);
 		
 		TestPerformance savedPerformance = null;
-		if (testResultDto.getPerformance() != null)
+		if (testResultDto.getPerformance().isPresent())
 		{
-			savedPerformance = this.performanceResultDao.save(new TestPerformance(testResultDto.getPerformance()));
+			savedPerformance = this.performanceResultDao.save(new TestPerformance(testResultDto.getPerformance().get()));
 		}
 		
 		final TestRun testRun = new TestRun();
@@ -100,21 +106,30 @@ public class ResultsController
 	}
 
 	private Test ensureTestExists(TestResultDto testResultDto)
-	{
-		final Test byName = this.testDao.findByTestClassAndMethodName(testResultDto.getTestClass(), testResultDto.getMethodName());
-		if (byName == null)
+	{		
+		final String tagString = StringUtils.arrayToCommaDelimitedString(testResultDto.getTags()).toLowerCase();
+		final String simpleClassName = FilenameUtils.getName(StringUtils.replace(testResultDto.getTestClass(), ".", "/"));
+		final String name = testResultDto.getName() != null ? testResultDto.getName() : simpleClassName + "." + testResultDto.getMethodName();
+		
+		final Test existing = this.testDao.findByTestClassAndMethodName(testResultDto.getTestClass(), testResultDto.getMethodName());
+		if (existing == null)
 		{
 			final Test test = new Test();
-			final String simpleClassName = FilenameUtils.getName(StringUtils.replace(testResultDto.getTestClass(), ".", "/"));
-			test.setName(testResultDto.getName() != null ? testResultDto.getName() : simpleClassName + "." + testResultDto.getMethodName());
+			test.setName(name);
 			test.setTestClass(testResultDto.getTestClass());
 			test.setMethodName(testResultDto.getMethodName());
 			test.setRepeats(testResultDto.getRepeats());
 			test.setConcurrency(testResultDto.getConcurrency());
 			test.setWarmupRuns(testResultDto.getWarmupRuns());
-			test.setTags(StringUtils.arrayToCommaDelimitedString(testResultDto.getTags()));
+			test.setTags(tagString);
 			return testDao.save(test);
 		}
-		return byName;
+		else
+		{
+			existing.setName(name);
+			existing.setTags(tagString);
+			testDao.save(existing);
+		}
+		return existing;
 	}
 }

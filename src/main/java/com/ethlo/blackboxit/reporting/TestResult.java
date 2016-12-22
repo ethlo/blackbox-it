@@ -1,6 +1,7 @@
 package com.ethlo.blackboxit.reporting;
 
 import java.util.Date;
+import java.util.Optional;
 import java.util.Set;
 
 import org.junit.runner.Description;
@@ -41,9 +42,9 @@ public class TestResult
 		return description;
 	}
 
-	public PerformanceReport getPerformanceReport()
+	public Optional<PerformanceReport> getPerformanceReport()
 	{
-		return performanceReport;
+		return Optional.ofNullable(performanceReport);
 	}
 
 	public boolean isSuccess()

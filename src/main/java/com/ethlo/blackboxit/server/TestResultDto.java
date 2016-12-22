@@ -1,6 +1,7 @@
 package com.ethlo.blackboxit.server;
 
 import java.util.Date;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.validation.constraints.NotNull;
@@ -34,7 +35,7 @@ public class TestResultDto
 	
 	private String name;
 	
-	private PerformanceReport performance;
+	private Optional<PerformanceReport> performance = Optional.empty();
 	
 	public String getMethodName()
 	{
@@ -56,14 +57,14 @@ public class TestResultDto
 		this.timestamp = timestamp;
 	}
 	
-	public PerformanceReport getPerformance()
+	public Optional<PerformanceReport> getPerformance()
 	{
 		return performance;
 	}
 	
-	public void setPerformance(PerformanceReport performance)
+	public void setPerformance(Optional<PerformanceReport> optional)
 	{
-		this.performance = performance;
+		this.performance = optional;
 	}
 
 	public void setSuccess(boolean success)

@@ -24,6 +24,8 @@ import org.junit.rules.MethodRule;
 import org.junit.rules.RunRules;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
+import org.junit.runner.manipulation.Filter;
+import org.junit.runner.manipulation.NoTestsRemainException;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.model.FrameworkMethod;
@@ -288,6 +290,12 @@ public class BlackboxTestRunner extends SpringJUnit4ClassRunner
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	@Override
+	public void filter(Filter filter) throws NoTestsRemainException
+	{
+		System.out.println(filter);
 	}
 	
 	public static final Comparator<FrameworkMethod> READ_ONLY_FIRST = new Comparator<FrameworkMethod>()

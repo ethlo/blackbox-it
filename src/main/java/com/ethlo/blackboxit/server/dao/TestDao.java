@@ -7,5 +7,5 @@ import com.ethlo.blackboxit.model.Test;
 
 public interface TestDao extends JpaRepository<Test, Integer>, JpaSpecificationExecutor<Test>
 {
-	Test findByTestClassAndMethodName(String testClass, String methodName);	
+	Test findByTestClassAndMethodName(String testClass, String methodName);
 }

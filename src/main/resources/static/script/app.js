@@ -3,16 +3,38 @@ var chart;
 var chartType = 'line';
 var fill = false;
 
-$.getJSON("/blackbox/api/v1/tests?size=50").done(function(data){renderTestList(data)})
+renderLatest();
+renderFiltered();
+renderVaryingPerformance();
+
+$('#searchbox').keyup(function() {
+	
+	renderFiltered(); 
+	
+	$('html, body').animate({
+        scrollTop: $("#tests-section").offset().top - 50
+    }, 200);
+})
+
+function renderFiltered() {
+	$.getJSON('/blackbox/api/v1/tests?size=500&tagFilter=' + $('#searchbox').val()).done(function(data){renderTestList(data)})
+}
 
 function renderTestList(data){
-	//console.log(data);
+	$('#tests-table-body').empty();
 	$.each(data.content, function(i, item) {
-
 		var tagLinks = [];
 		var arr = item.tags.split(',');
 		for (i in arr){
-			tagLinks.push($('<a>').attr('href', '#tag:' + arr[i]).text('#' + arr[i]).css('padding-right', '6px').css('white-space', 'nowrap'));
+			tagLinks.push($('<a>')
+				.text(arr[i])
+				.click(function(e){
+					$('#searchbox').val(arr[i]);
+					console.log(e);
+					renderFiltered();
+				  })
+				.css('padding-right', '6px')
+				.css('white-space', 'nowrap'));
 		}
 		
 		function render() {
@@ -24,7 +46,7 @@ function renderTestList(data){
         		.append($('<td>')
         				.attr('colspan', '6')
         					.append($('<canvas>').attr('id', 'performance-results')));
-        	console.log(lasttr.html());
+        	
         	lasttr.insertAfter($(this).closest('tr'))
         	
         	renderChart(item.id); 
@@ -44,9 +66,31 @@ function renderTestList(data){
      });
     };
 
+function renderLatest() {
+	$.getJSON('/blackbox/api/v1/results').done(function(d){
+		$.each(d.content, function(i, item) {
+		var $tr = $('<tr>').append(
+	        	$('<td>').text(item.test.id),
+	            $('<td>').text(item.test.name).attr('title', item.test.testClass + '.' + item.test.methodName + '()'),
+	            $('<td>').text(item.testPerformance.average + ' ms')
+	        ).appendTo('#latest-table-body');
+		});
+	});
+}
+
+function renderVaryingPerformance() {
+	$.getJSON('/blackbox/api/v1/analysis/varyingperformance?max=10').done(function(d){
+		console.log(d);
+		$.each(d.content, function(i, item) {
+		var $tr = $('<tr>').append(
+	        	$('<td>').text(item.id),
+	            $('<td>').text(item.name).attr('title', item.testClass + '.' + item.methodName + '()')
+	        ).appendTo('#varying-performance-table-body');
+		});
+	});
+}
 
 function renderChart(testId) {
-	
 	$.getJSON("/blackbox/api/v1/results/?testId=" + testId + '&size=10').done(function(d){
 	
 	var hasPerformance = false;

@@ -1,11 +1,13 @@
 package com.ethlo.blackboxit;
 
-import static com.jayway.restassured.RestAssured.basic;
+import static io.restassured.RestAssured.basic;
 
 import org.junit.Before;
 import org.springframework.beans.factory.annotation.Value;
 
-import com.jayway.restassured.RestAssured;
+import io.restassured.RestAssured;
+import io.restassured.config.RestAssuredConfig;
+import io.restassured.config.SSLConfig;
 
 public abstract class RestAssuredAbstractTest extends TestFixtureAwareAbstractTest
 {
@@ -24,5 +26,6 @@ public abstract class RestAssuredAbstractTest extends TestFixtureAwareAbstractTe
 		RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
 		RestAssured.baseURI = baseURI;
 		RestAssured.authentication = basic(defaultUsername, defaultPassword);
+		RestAssured.config = RestAssured.config().sslConfig(new SSLConfig().allowAllHostnames().relaxedHTTPSValidation()); 
 	}
 }
